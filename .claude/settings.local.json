@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "WebSearch",
+      "Bash(npx create-next-app@latest *)",
+      "Read(//Users/hiepnguyen/Documents/SourceCode/**)",
+      "Bash(mv TheLastHuman the-last-human-temp)",
+      "Bash(bash *)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

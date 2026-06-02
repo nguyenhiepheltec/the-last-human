@@ -10,7 +10,14 @@
       "Bash(bash *)",
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(openssl rand *)",
+      "Bash(curl -L -o /Users/hiepnguyen/Documents/SourceCode/TheLastHuman/public/world-map.svg \"https://raw.githubusercontent.com/simonepri/geo-maps/master/previews/countries-land-1m.geo.svg\")",
+      "Bash(curl -L -o /tmp/world-topo.json \"https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json\")",
+      "Bash(git add *)"
     ]
   }
 }

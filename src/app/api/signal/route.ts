@@ -10,7 +10,44 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { display_name, turnstile_token } = body;
 
-    // Validate turnstile
+    // Sanitize display name
+    const name = (display_name || "Anonymous")
+      .trim()
+      .slice(0, MAX_NAME_LENGTH) || "Anonymous";
+
+    // Hash IP for rate limiting
+    const ip = getClientIp(request);
+    const ipHash = await hashIp(ip);
+
+    const supabase = getSupabaseServiceClient();
+
+    // Check timer status
+    const { data: timer } = await supabase
+      .from("timer_state")
+      .select("*")
+      .eq("id", 1)
+      .single();
+
+    if (!timer || timer.status === "extinct") {
+      return NextResponse.json(
+        { error: "Humanity is already extinct", timer },
+        { status: 409 }
+      );
+    }
+
+    // Check rate limit BEFORE turnstile (avoid wasting turnstile call when rate-limited)
+    const rateLimit = await checkRateLimit(supabase, ipHash, timer.season);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many signals. Please wait.",
+          retryAfterMs: rateLimit.retryAfterMs,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Validate turnstile (after rate limit so we don't waste single-use tokens)
     if (turnstile_token) {
       const valid = await verifyTurnstileToken(turnstile_token);
       if (!valid) {
@@ -20,11 +57,6 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-
-    // Sanitize display name
-    const name = (display_name || "Anonymous")
-      .trim()
-      .slice(0, MAX_NAME_LENGTH) || "Anonymous";
 
     // Get country + coordinates from Vercel geo headers, fallback to IP lookup
     let countryCode =
@@ -49,38 +81,6 @@ export async function POST(request: NextRequest) {
     }
 
     const countryName = getCountryName(countryCode);
-
-    // Hash IP for rate limiting
-    const ip = getClientIp(request);
-    const ipHash = await hashIp(ip);
-
-    const supabase = getSupabaseServiceClient();
-
-    // Check timer status
-    const { data: timer } = await supabase
-      .from("timer_state")
-      .select("*")
-      .eq("id", 1)
-      .single();
-
-    if (!timer || timer.status === "extinct") {
-      return NextResponse.json(
-        { error: "Humanity is already extinct", timer },
-        { status: 409 }
-      );
-    }
-
-    // Check rate limit
-    const rateLimit = await checkRateLimit(supabase, ipHash, timer.season);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many signals. Please wait.",
-          retryAfterMs: rateLimit.retryAfterMs,
-        },
-        { status: 429 }
-      );
-    }
 
     // Insert signal
     const { data: signal, error: signalError } = await supabase

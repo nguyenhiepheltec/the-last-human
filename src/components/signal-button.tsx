@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { TurnstileWidget } from "./turnstile-widget";
-import { MAX_NAME_LENGTH } from "@/lib/constants";
+import { MAX_NAME_LENGTH, RATE_LIMIT_WINDOW_MS } from "@/lib/constants";
 
 type ButtonState = "idle" | "loading" | "success" | "rate-limited" | "error";
 
@@ -10,8 +10,38 @@ export function SignalButton() {
   const [name, setName] = useState("");
   const [buttonState, setButtonState] = useState<ButtonState>("idle");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
   const [retryAfterMs, setRetryAfterMs] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isRateLimited = buttonState === "rate-limited";
+
+  useEffect(() => {
+    if (!isRateLimited || retryAfterMs <= 0) return;
+
+    intervalRef.current = setInterval(() => {
+      setRetryAfterMs((prev) => {
+        const next = prev - 1000;
+        if (next <= 0) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setButtonState("idle");
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isRateLimited]);
+
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+    setTurnstileKey((k) => k + 1);
+  }, []);
 
   const handleSignal = useCallback(async () => {
     if (buttonState === "loading") return;
@@ -28,6 +58,9 @@ export function SignalButton() {
           turnstile_token: turnstileToken,
         }),
       });
+
+      // Reset turnstile to get a fresh token for next submission
+      resetTurnstile();
 
       if (res.status === 429) {
         const data = await res.json();
@@ -49,11 +82,11 @@ export function SignalButton() {
       setErrorMsg("Network error. Try again.");
       setButtonState("error");
     }
-  }, [buttonState, name, turnstileToken]);
+  }, [buttonState, name, turnstileToken, resetTurnstile]);
 
   const formatRetry = (ms: number) => {
-    const min = Math.ceil(ms / 60000);
-    return `${min} min`;
+    const min = Math.ceil(ms / 1000);
+    return `${min} seconds`;
   };
 
   return (
@@ -107,11 +140,11 @@ export function SignalButton() {
 
       {buttonState === "rate-limited" && (
         <p className="text-accent-amber text-[9px] tracking-[0.2em] uppercase text-center">
-          COOLDOWN — ONE SIGNAL PER 30 MIN
+          COOLDOWN — ONE SIGNAL PER {RATE_LIMIT_WINDOW_MS / 1000} SECONDS
         </p>
       )}
 
-      <TurnstileWidget onVerify={setTurnstileToken} />
+      <TurnstileWidget key={turnstileKey} onVerify={setTurnstileToken} />
     </div>
   );
 }

@@ -16,7 +16,7 @@ export function TurnstileWidget({
       sitekey={siteKey}
       onVerify={onVerify}
       theme="dark"
-      size="invisible"
+      size="flexible"
     />
   );
 }

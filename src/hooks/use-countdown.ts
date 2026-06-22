@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 interface CountdownValues {
+  days: number;
   hours: number;
   minutes: number;
   seconds: number;
@@ -24,7 +25,7 @@ export function useCountdown(deadline: string): CountdownValues {
 
   // During SSR / first render, show deadline as-is (no countdown yet)
   if (now === null) {
-    return { hours: 24, minutes: 0, seconds: 0, totalMs: 86400000, isExpired: false };
+    return { days: 365, hours: 0, minutes: 0, seconds: 0, totalMs: 365 * 24 * 60 * 60 * 1000, isExpired: false };
   }
 
   const deadlineMs = new Date(deadline).getTime();
@@ -32,9 +33,10 @@ export function useCountdown(deadline: string): CountdownValues {
   const isExpired = totalMs <= 0;
 
   const totalSeconds = Math.floor(totalMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  return { hours, minutes, seconds, totalMs, isExpired };
+  return { days, hours, minutes, seconds, totalMs, isExpired };
 }

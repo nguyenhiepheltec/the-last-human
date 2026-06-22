@@ -61,6 +61,7 @@ export function CountdownTimer({
 
       <div className={`${textClass} ${glowClass} font-bold`}>
         <span className="text-4xl md:text-6xl tracking-wider font-mono">
+          {countdown.days > 0 && <>{countdown.days}<span className="text-2xl md:text-3xl text-text-muted">d</span> </>}
           {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
         </span>
       </div>

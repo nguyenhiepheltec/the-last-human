@@ -23,7 +23,7 @@ function geoToSvg(lat: number, lng: number): { x: number; y: number } {
 
 function dotOpacity(createdAt: string): number {
   const ageMs = Date.now() - new Date(createdAt).getTime();
-  const maxAge = 24 * 60 * 60 * 1000;
+  const maxAge = 7 * 24 * 60 * 60 * 1000;
   if (ageMs <= 0) return 1;
   if (ageMs >= maxAge) return 0.05;
   return 1 - (ageMs / maxAge) * 0.95;
@@ -33,6 +33,7 @@ function dotRadius(createdAt: string): number {
   const ageMs = Date.now() - new Date(createdAt).getTime();
   if (ageMs < 5 * 60 * 1000) return 5;
   if (ageMs < 60 * 60 * 1000) return 3.5;
+  if (ageMs < 24 * 60 * 60 * 1000) return 2.5;
   return 2;
 }
 
@@ -54,7 +55,7 @@ export function WorldMap({ season }: { season: number }) {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     supabase
       .from("signals")
@@ -64,7 +65,7 @@ export function WorldMap({ season }: { season: number }) {
       .not("longitude", "is", null)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .limit(500)
+      .limit(2000)
       .then(({ data }: { data: MapSignal[] | null }) => {
         if (data) setSignals(data);
       });
@@ -111,7 +112,7 @@ export function WorldMap({ season }: { season: number }) {
     <div className="w-full">
       <div className="text-center mb-1.5">
         <span className="text-[9px] tracking-[0.3em] uppercase text-text-dim">
-          SIGNAL MAP — LAST 24H
+          SIGNAL MAP — LAST 7 DAYS
           {signals.length > 0 && ` — ${signals.length} SIGNAL${signals.length !== 1 ? "S" : ""}`}
         </span>
       </div>
